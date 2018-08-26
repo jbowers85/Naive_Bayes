@@ -21,5 +21,5 @@ If using this code within R Studio, collapse all sections by pressing Alt + O fo
 
 ### Sections:
 
-1.)  Naive Bayes - Classification - Binary Dependent Variable
-1.)  Naive Bayes - Text Classification - Multiple Dependent Variables
+1.)  Naive Bayes - Classification - Binary Dependent Variable  
+2.)  Naive Bayes - Text Classification - Multiple Dependent Variables

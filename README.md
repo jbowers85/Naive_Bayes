@@ -9,7 +9,7 @@ Then we will predict the author of Victorian era text using Naive Bayes along wi
 
 ## Getting Started
 
-You can access the data in the UCI Machine Learning repository (linked below) by following along with the R code.     
+You can access the data from the UCI Machine Learning repository (linked below) by following along with the R code.     
 [Census Test](https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.test)  
 [Census Train](https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data)  
 [Victorian Authors](https://archive.ics.uci.edu/ml/machine-learning-databases/00217/C50.zip)

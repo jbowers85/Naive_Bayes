@@ -2,7 +2,9 @@
 Examples of Naive Bayes classification workflows
 
 This repository is meant to provide an example of implementing a Naive Bayes algorithm in R.  
+
 We will predict whether or not someone makes over $50k per year using the Census data.  
+
 Then we will predict the author of Victorian era text using Naive Bayes along with natural language processing (NLP) techniques.
 
 **Naive Bayes**: A probabilistic classifier that assumes independence between the features. Predictions are based on the historic probabilities.

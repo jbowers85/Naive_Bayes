@@ -28,7 +28,7 @@ library(here)
 
 options(scipen=999)
 
-## 1.) NAIVE BAYES - CLASSIFICATION ####
+## 1.) NAIVE BAYES - CLASSIFICATION - BINARY DEPENDENT VARIABLE ####
 
 ### Get Data ####
 
@@ -145,7 +145,7 @@ predict(nb_fit2, newData)
 
 
 
-## 2.) NAIVE BAYES - CLASSIFICATION (TEXT) ####
+## 2.) NAIVE BAYES - CLASSIFICATION - MULTIPLE DEPENDENT VARIABLES ####
 
 ### Get Data ####
 

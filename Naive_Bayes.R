@@ -1,5 +1,6 @@
 #___________________________________________________________________________________________________________________________________
 # 1.) This is an example workflow that predicts whether someone makes over 50k/year using the Naive Bayes algorithm.
+# 
 # 2.) This is an example workflow that predicts the author of text using the Naive Bayes algorithm along with 
 #     other natural language processing (NLP) techniques.
 #
@@ -23,6 +24,7 @@ library(caret)
 library(dplyr)
 library(readtext)
 library(quanteda)
+library(here)
 
 options(scipen=999)
 
@@ -42,7 +44,6 @@ head(testData)
 
 write.csv(trainData, file = "Census_Train.csv", row.names = FALSE)
 write.csv(testData, file = "Census_Test.csv", row.names = FALSE)
-getwd()
 
 #### combine datasets into a single data frame
 allData <- rbind(trainData, testData[-1,]) # remove the 1st row in TestData due to bad data
@@ -153,12 +154,12 @@ dataUrl <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00217/C50.
 download.file(dataUrl, "C50.zip")
 
 #### unzip the contents of .zip folder and store in working directory
-zipFilePath <- paste0(getwd(),"/C50.zip")
+zipFilePath <- here("C50.zip")
 unzip(zipFilePath)
 
 #### get list of authors (also the name of individual folders within train/test)
-trainAuthorList <- list.files(path=paste0(getwd(),"/C50train"))
-testAuthorList <- list.files(path=paste0(getwd(),"/C50test"))
+trainAuthorList <- list.files(path=here("C50train"))
+testAuthorList <- list.files(path=here("C50test"))
 
 #### initialize data frame for train and test data
 rawTrainData <- data.frame(Author=NULL,doc_id=NULL, text=NULL)
@@ -167,7 +168,7 @@ rawTestData <- data.frame(Author=NULL,doc_id=NULL, text=NULL)
 #### loop through all folders and retrieve the text for training data
 for (i in 1:length(trainAuthorList)) {
   require(readtext)
-  filePath <- sprintf(paste0(getwd(),"/C50train/%s"), trainAuthorList[i])
+  filePath <- sprintf(here("C50train","%s"), trainAuthorList[i])
   authorText <- readtext(filePath)
   rawTrainData <- rbind(rawTrainData, data.frame(Author=trainAuthorList[i], authorText))
 }
@@ -175,7 +176,7 @@ for (i in 1:length(trainAuthorList)) {
 #### loop through all folders and retrieve the text for test data
 for (i in 1:length(testAuthorList)) {
   require(readtext)
-  filePath <- sprintf(paste0(getwd(),"/C50test/%s"), testAuthorList[i])
+  filePath <- sprintf(here("C50test","%s"), testAuthorList[i])
   authorText <- readtext(filePath)
   rawTestData <- rbind(rawTestData, data.frame(Author=testAuthorList[i], authorText))
 }
@@ -186,8 +187,8 @@ rawAllData <- rbind(rawTrainData, rawTestData)
 
 #### retrieve clean tokens (split text by word, only keep alpha characters)
 allTokens <- tokens(rawAllData$text, what="word",
-                      remove_numbers=TRUE, remove_punct = TRUE,
-                      remove_symbols = TRUE, remove_hyphens = TRUE)
+                    remove_numbers=TRUE, remove_punct = TRUE,
+                    remove_symbols = TRUE, remove_hyphens = TRUE)
 
 allTokens[[85]]
 
@@ -198,7 +199,7 @@ allTokens[[85]]
 
 #### remove stopwords
 allTokens <- tokens_select(allTokens, stopwords(),
-                             selection = "remove", verbose = TRUE) # edit the stopword list for your problem.
+                           selection = "remove", verbose = TRUE) # edit the stopword list for your problem.
 allTokens[[85]]
 
 #### stem the tokens
@@ -219,7 +220,7 @@ allTokensFreqDFM <- dfm_trim(allTokensDFM, min_termfreq = 30, min_docfreq = 5)
 
 paste0("# of Columns: ",ncol(allTokensFreqDFM),"  |  Features reduced by ",
        round( 100 * (1-ncol(allTokensFreqDFM) / ncol(allTokensDFM)),1),"%")
-        
+
 ### Create Labeled Train Data Set #### 
 allTokensDF <- cbind(Label = rawAllData$Author, data.frame(allTokensFreqDFM)[ ,-1]) # removed the unique document identifier
 
@@ -270,10 +271,9 @@ newText <- tokens(newText$text, what="word",
                   remove_symbols = TRUE, remove_hyphens = TRUE)
 newText <- tokens_tolower(newText)
 newText <- tokens_select(newText, stopwords(),
-                          selection = "remove", verbose = TRUE)
+                         selection = "remove", verbose = TRUE)
 newText <- tokens_wordstem(newText, language = "english")
 newText <- dfm(newText, tolower = FALSE, verbose = TRUE)
 
 #### predict the author
 predict(nb_fit1, newText, type="class")
-

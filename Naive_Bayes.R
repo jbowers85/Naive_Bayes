@@ -42,9 +42,6 @@ head(trainData)
 testData <- read.csv(testUrl, header=FALSE, stringsAsFactors=TRUE, sep=',')
 head(testData)
 
-write.csv(trainData, file = "Census_Train.csv", row.names = FALSE)
-write.csv(testData, file = "Census_Test.csv", row.names = FALSE)
-
 #### combine datasets into a single data frame
 allData <- rbind(trainData, testData[-1,]) # remove the 1st row in TestData due to bad data
 head(allData,30)
@@ -86,54 +83,90 @@ str(allData)
 
 
 ### Split Data ####
+set.seed(127)
 trainIndex <- createDataPartition(allData$class, p=0.8, list=FALSE) # pkg: caret
 trainIndex
+
 trainData <- allData[trainIndex,]
 testData <- allData[-trainIndex,]
 
-nrow(testData)/nrow(trainData) # ratio of test to train  
+1 - (nrow(testData) / (nrow(trainData) + nrow(testData))) # ensure 80% in train  
 
-table(trainData$native_country)
-#### Build & Evaluate Model 1 ####
+table(testData$native_country)
+
+### Build & Evaluate Model 1 - pkg: e1071 ####
+
+#### train model
 nb_fit1 <- naiveBayes(class ~ . , data=trainData)
-
-pred1 <- predict(nb_fit1, testData[,-15], type="raw")
+#### apply model to test set for predictions
+pred1 <- round(predict(nb_fit1, testData, type="raw"), digits=5)
 
 testData1 <- testData
-testData1$pred_conf <- round(pred1[,1], digits=10)
+testData1$pred_conf <- pred1[,1]
 
-testData1$pred_class <-  ifelse(testData1$pred_conf >= .99, "<=50K", ">50K")
+#### predict class of <=50K if confidence is >= 95%
+testData1$pred_class <-  ifelse(testData1$pred_conf >= .95, "<=50K", ">50K")
+
+#### distribution of predicted classes vs actual classes 
 table(testData1$pred_class)
+table(testData1$class)
 
+#### construct confusion matrix to assess performance
 cm_nb1 <- confusionMatrix(data=testData1$pred_class, reference=testData1[,15], positive = ">50K")
 cm_nb1
 
 
-#### Build & Evaluate Model 2 ####
-caret.control <- trainControl(method="repeatedcv", number=10, repeats=1)
 
+### Build & Evaluate Model 2 - pkg: caret ####
+
+#### set up 10-fold cross validation
+caret.control <- trainControl(method="cv", number=10)
+#### create grid of desired model tuning parameter
+tuning.grid <- expand.grid(
+  usekernel = c(TRUE, FALSE),
+  fL = 0:1,
+  adjust = 0:5)
+
+
+# http://uc-r.github.io/naive_bayes TRY TO IMPROVE
+# https://stackoverflow.com/questions/31138751/roc-curve-from-training-data-in-caret
+
+#### train model
 nb_fit2 <- train(class ~ ., 
                  data = trainData,
-                 method = "naive_bayes",
+                 method = "nb",
                  trControl = caret.control,
-                 tuneLength=5)
+                 tuneGrid = tuning.grid,
+                 metric = "Accuracy")    #  Classification: "Accuracy", "Kappa" | Regression: "RMSE","Rsquared" 
 
-pred2 <- predict(nb_fit2, testData[,-15], type = "prob") # or use class="prob" to get percentages so we can adjust threshold manually. 
+confusionMatrix(nb_fit2)
+
+nb_fit2$results    # show results for all combinations
+nb_fit2$bestTune   # show parameters that gave the highest accuracy
+nb_fit2$resample   # observe performance of the final model during cross-validation
+
+#### apply model to test set for predictions
+pred2 <- predict(nb_fit2, testData[,-15], type = "prob") 
 
 testData2 <- testData
 testData2$pred_conf <- round(pred2[,1], digits=10)
 
 
-testData2$pred_class <-  ifelse(testData2$pred_conf >= .999999999, "<=50K", ">50K")
-table(testData2$pred_class)
+#### predict class of <=50K if confidence is >= 99.9965%
+testData2$pred_class <-  ifelse(testData2$pred_conf >= .999965, "<=50K", ">50K")
 
-cm_nb2 <- confusionMatrix(data=testData2$pred_class, reference=testData2[,15], positive = ">50K")
+#### distribution of predicted classes vs actual classes 
+table(testData2$pred_class)
+table(testData2$class)
+
+#### construct confusion matrix to assess performance
+cm_nb2 <- confusionMatrix(data=testData2$pred_class2, reference=testData2[,15], positive = ">50K")
 cm_nb2
 
 
 #### Predict New Data ####
-newData <- data.frame(age=55, workclass="Private", fnlwgt=150000, education="Masters", education_num=14, marital_status="Never-married", occupation="Prof-specialty", relationship="Unmarried", 
-                      race="White", sex="Male", capital_gain=2000, capital_loss=0, hours_per_week=42, native_country="United-States")
+newData <- data.frame(age=30, workclass="Private", fnlwgt=150000, education="Masters", education_num=14, marital_status="Never-married", occupation="Prof-specialty", relationship="Unmarried", 
+                      race="White", sex="Male", capital_gain=2500, capital_loss=0, hours_per_week=46, native_country="United-States")
 
 predict(nb_fit1, newData)
 predict(nb_fit2, newData)
@@ -277,3 +310,8 @@ newText <- dfm(newText, tolower = FALSE, verbose = TRUE)
 
 #### predict the author
 predict(nb_fit1, newText, type="class")
+
+
+
+
+

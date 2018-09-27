@@ -28,6 +28,9 @@ library(here)
 
 options(scipen=999)
 
+# Define Functions
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)   
+
 ## 1.) NAIVE BAYES - CLASSIFICATION - BINARY DEPENDENT VARIABLE ####
 
 ### Get Data ####
@@ -69,13 +72,12 @@ allData <- allData[complete.cases(allData),]
 
 ##### clean up the "class" variable
 allData$class <- 
-  case_when(allData$class %in% c(" <=50K."," <=50K") ~ "<=50K",
-            allData$class %in% c(" >50K.", " >50K" ) ~ ">50K")
+  case_when(allData$class %in% c(" <=50K."," <=50K") ~ "LT50K",
+            allData$class %in% c(" >50K.", " >50K" ) ~ "GT50K")
 
 allData$class <- factor(allData$class)
 
 ##### trim leading and trailing spaces
-trim <- function (x) gsub("^\\s+|\\s+$", "", x)   
 allData[,c(2,4,6:10,14)] <- apply(allData[,c(2,4,6:10,14)], 2, trim) 
 
 allData
@@ -92,7 +94,6 @@ testData <- allData[-trainIndex,]
 
 1 - (nrow(testData) / (nrow(trainData) + nrow(testData))) # ensure 80% in train  
 
-table(testData$native_country)
 
 ### Build & Evaluate Model 1 - pkg: e1071 ####
 
@@ -104,15 +105,15 @@ pred1 <- round(predict(nb_fit1, testData, type="raw"), digits=5)
 testData1 <- testData
 testData1$pred_conf <- pred1[,1]
 
-#### predict class of <=50K if confidence is >= 95%
-testData1$pred_class <-  ifelse(testData1$pred_conf >= .95, "<=50K", ">50K")
+#### predict class of >50K if confidence is >= 2.5%
+testData1$pred_class <-  ifelse(testData1$pred_conf >= .025, "GT50K", "LT50K")
 
 #### distribution of predicted classes vs actual classes 
 table(testData1$pred_class)
 table(testData1$class)
 
 #### construct confusion matrix to assess performance
-cm_nb1 <- confusionMatrix(data=testData1$pred_class, reference=testData1[,15], positive = ">50K")
+cm_nb1 <- confusionMatrix(data=testData1$pred_class, reference=testData1[,15], positive = "GT50K")
 cm_nb1
 
 
@@ -120,12 +121,12 @@ cm_nb1
 ### Build & Evaluate Model 2 - pkg: caret ####
 
 #### set up 10-fold cross validation
-caret.control <- trainControl(method="cv", number=10)
+caret.control <- trainControl(method="cv", number=10, classProbs = TRUE)
 #### create grid of desired model tuning parameter
 tuning.grid <- expand.grid(
   usekernel = c(TRUE, FALSE),
   fL = 0:1,
-  adjust = 0:5)
+  adjust = 0:2)
 
 
 # http://uc-r.github.io/naive_bayes TRY TO IMPROVE
@@ -152,28 +153,26 @@ testData2 <- testData
 testData2$pred_conf <- round(pred2[,1], digits=10)
 
 
-#### predict class of <=50K if confidence is >= 99.9965%
-testData2$pred_class <-  ifelse(testData2$pred_conf >= .999965, "<=50K", ">50K")
+#### predict class of <=50K if confidence is <= 00.00025%
+testData2$pred_class <-  ifelse(testData2$pred_conf <= .0000025, "LT50K", "GT50K")
 
 #### distribution of predicted classes vs actual classes 
 table(testData2$pred_class)
 table(testData2$class)
 
 #### construct confusion matrix to assess performance
-cm_nb2 <- confusionMatrix(data=testData2$pred_class2, reference=testData2[,15], positive = ">50K")
+cm_nb2 <- confusionMatrix(data=testData2$pred_class, reference=testData2[,15], positive = "GT50K")
 cm_nb2
 
 
 #### Predict New Data ####
-newData <- data.frame(age=30, workclass="Private", fnlwgt=150000, education="Masters", education_num=14, marital_status="Never-married", occupation="Prof-specialty", relationship="Unmarried", 
-                      race="White", sex="Male", capital_gain=2500, capital_loss=0, hours_per_week=46, native_country="United-States")
-
-predict(nb_fit1, newData)
-predict(nb_fit2, newData)
+newData <- data.frame(age=43, workclass="Private", fnlwgt=304175, education="Masters", education_num=14, marital_status="Married-civ-spouse", occupation="Prof-specialty", relationship="Husband", 
+                      race="White", sex="Male", capital_gain=0, capital_loss=0, hours_per_week=50, native_country="United-States")
 
 
-
-
+ifelse(predict(nb_fit1, newData, type = "raw")[,1] >=.025, "GT50K", "LT50K")
+  
+ifelse(predict(nb_fit2, newData, type = "prob")[,1] <= .0000025, "LT50K", "LT50K")
 
 
 
@@ -310,8 +309,3 @@ newText <- dfm(newText, tolower = FALSE, verbose = TRUE)
 
 #### predict the author
 predict(nb_fit1, newText, type="class")
-
-
-
-
-

@@ -129,9 +129,6 @@ tuning.grid <- expand.grid(
   adjust = 0:2)
 
 
-# http://uc-r.github.io/naive_bayes TRY TO IMPROVE
-# https://stackoverflow.com/questions/31138751/roc-curve-from-training-data-in-caret
-
 #### train model
 nb_fit2 <- train(class ~ ., 
                  data = trainData,

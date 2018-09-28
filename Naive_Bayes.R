@@ -154,7 +154,7 @@ testData2$pred_conf <- round(pred2[,1], digits=10)
 
 
 #### predict class of <=50K if confidence is <= 00.00025%
-testData2$pred_class <-  ifelse(testData2$pred_conf <= .0000025, "LT50K", "GT50K")
+testData2$pred_class <-  ifelse(testData2$pred_conf >= .0000025, "GT50K", "LT50K")
 
 #### distribution of predicted classes vs actual classes 
 table(testData2$pred_class)
@@ -172,7 +172,7 @@ newData <- data.frame(age=43, workclass="Private", fnlwgt=304175, education="Mas
 
 ifelse(predict(nb_fit1, newData, type = "raw")[,1] >=.025, "GT50K", "LT50K")
   
-ifelse(predict(nb_fit2, newData, type = "prob")[,1] <= .0000025, "LT50K", "LT50K")
+ifelse(predict(nb_fit2, newData, type = "prob")[,1] >= .0000025, "GT50K", "LT50K")
 
 
 
@@ -219,7 +219,7 @@ rawAllData <- rbind(rawTrainData, rawTestData)
 
 #### retrieve clean tokens (split text by word, only keep alpha characters)
 allTokens <- tokens(rawAllData$text, what="word",
-                    remove_numbers=TRUE, remove_punct = TRUE,
+                    remove_numbers = TRUE, remove_punct = TRUE,
                     remove_symbols = TRUE, remove_hyphens = TRUE)
 
 allTokens[[85]]
@@ -266,15 +266,16 @@ trainIndex
 trainData <- allTokensDF[trainIndex,]
 testData <- allTokensDF[-trainIndex,]
 
-nrow(testData)/nrow(trainData) # ratio of test to train
+1 - (nrow(testData) / (nrow(trainData) + nrow(testData))) # ensure 80% in train  
 
 
 #### Build & Evaluate Model 1 ####
 nb_fit1 <- naiveBayes(Label ~ . , data=trainData)
 
+testData1 <- testData
+
 pred1 <- predict(nb_fit1, testData[,-1], type="class")
 
-testData1 <- testData
 testData1$Label_pred <- pred1
 
 table(testData1$Label)

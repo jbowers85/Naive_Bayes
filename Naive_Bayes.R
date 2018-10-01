@@ -295,22 +295,43 @@ testData <- allTokensDF[-trainIndex,]
 1 - (nrow(testData) / (nrow(trainData) + nrow(testData))) # ensure 80% in train  
 
 
-#### Build & Evaluate Model 1 ####
+### Build & Evaluate Model 1 ####
+
+#### train model
 nb_fit1 <- naiveBayes(Label ~ . , data=trainData)
 
-testData1 <- testData
-
+#### apply model to test set for predictions
 pred1 <- predict(nb_fit1, testData[,-1], type="class")
 
+testData1 <- testData
 testData1$Label_pred <- pred1
 
+#### distribution of predicted classes vs actual classes
 table(testData1$Label)
 table(testData1$Label_pred)
 
+#### construct confusion matrix to assess perofrmance
 cm_nb1 <- confusionMatrix(data=testData1$Label_pred, reference=testData1$Label)
 
-round(cm_nb1$overall,4)[1] # overall accuracy
+round(cm_nb1$overall,4) 
 cm_nb1
+
+
+#### plot ROC curve to assess performance
+
+##### get all ROC curves for each combination of Label / Label_pred 
+roc_multi <- multiclass.roc(testData1$Label, as.numeric(testData1$Label_pred))
+##### compute total AUC
+auc(roc_multi)
+
+# (not very helpful here, but when less classes are present the below can be useful)
+##### individual ROC plots
+roc_multi_parsed <- roc_multi[['rocs']]
+##### plot first combination
+plot.roc(roc_multi_parsed[[1]])
+##### plot the rest of the combinations
+sapply(2:length(roc_multi_parsed), function(i) lines.roc(roc_multi_parsed[[i]], col=i)) 
+
 
 
 ### Predict New Data ####

@@ -7,15 +7,15 @@
 # By: James Bowers
 # 
 # The data used in this code was taken from the UCI Machine Learning Repository: 
-# https://archive.ics.uci.edu/ml/datasets/adult
-# https://archive.ics.uci.edu/ml/datasets/Victorian+Era+Authorship+Attribution
+#   https://archive.ics.uci.edu/ml/datasets/adult
+#   https://archive.ics.uci.edu/ml/datasets/Victorian+Era+Authorship+Attribution
 # 
 # Source Data Citation: 
-# Dua, D. and Karra Taniskidou, E. (2017). UCI Machine Learning Repository 
-# Irvine, CA: University of California, School of Information and Computer Science.
+#   Dua, D. and Karra Taniskidou, E. (2017). UCI Machine Learning Repository 
+#   Irvine, CA: University of California, School of Information and Computer Science.
 #
-# Gungor, A. (2018). Fifty Victorian Era Novelists Authorship Attribution Data. 
-# IUPUI University Library. http://dx.doi.org/10.7912/D2N65J
+#   Gungor, A. (2018). Fifty Victorian Era Novelists Authorship Attribution Data. 
+#   IUPUI University Library. http://dx.doi.org/10.7912/D2N65J
 # 
 #___________________________________________________________________________________________________________________________________
 
@@ -25,6 +25,7 @@ library(dplyr)
 library(readtext)
 library(quanteda)
 library(here)
+library(pROC)
 
 options(scipen=999)
 
@@ -117,16 +118,29 @@ cm_nb1 <- confusionMatrix(data=testData1$pred_class, reference=testData1[,15], p
 cm_nb1
 
 
+#### plot ROC curve to assess performance
+plot.roc(testData1$class, testData1$pred_conf,
+         percent = TRUE,
+         print.auc = TRUE,
+         ci = TRUE,
+         print.thres="best",
+         print.thres.best.method="youden",   # or "closest.topleft" 
+         print.thres.pattern="%.10f (%.1f%%, %.1f%%)") # see 10 digits of precision in threshold
+
+
+
+
 
 ### Build & Evaluate Model 2 - pkg: caret ####
 
 #### set up 10-fold cross validation
-caret.control <- trainControl(method="cv", number=10, classProbs = TRUE)
+caret.control <- trainControl(method="cv", number=10, 
+                              classProbs = TRUE, savePredictions = TRUE)
 #### create grid of desired model tuning parameter
 tuning.grid <- expand.grid(
   usekernel = c(TRUE, FALSE),
   fL = 0:1,
-  adjust = 0:2)
+  adjust = 1:5)
 
 
 #### train model
@@ -150,6 +164,7 @@ testData2 <- testData
 testData2$pred_conf <- round(pred2[,1], digits=10)
 
 
+
 #### predict class of <=50K if confidence is <= 00.00025%
 testData2$pred_class <-  ifelse(testData2$pred_conf >= .0000025, "GT50K", "LT50K")
 
@@ -157,18 +172,32 @@ testData2$pred_class <-  ifelse(testData2$pred_conf >= .0000025, "GT50K", "LT50K
 table(testData2$pred_class)
 table(testData2$class)
 
+
 #### construct confusion matrix to assess performance
 cm_nb2 <- confusionMatrix(data=testData2$pred_class, reference=testData2[,15], positive = "GT50K")
 cm_nb2
 
 
-#### Predict New Data ####
+#### plot ROC curve to assess performance
+plot.roc(testData2$class, testData2$pred_conf,
+         percent = TRUE,
+         print.auc = TRUE,
+         ci = TRUE,
+         print.thres="best",
+         print.thres.best.method="youden",   # or "closest.topleft" 
+         print.thres.pattern="%.10f (%.1f%%, %.1f%%)") # see 10 digits of precision in threshold
+
+
+
+### Predict New Data ####
+#### create new record to predict
 newData <- data.frame(age=43, workclass="Private", fnlwgt=304175, education="Masters", education_num=14, marital_status="Married-civ-spouse", occupation="Prof-specialty", relationship="Husband", 
                       race="White", sex="Male", capital_gain=0, capital_loss=0, hours_per_week=50, native_country="United-States")
 
-
+#### apply Model 1
 ifelse(predict(nb_fit1, newData, type = "raw")[,1] >=.025, "GT50K", "LT50K")
-  
+
+#### apply Model 2
 ifelse(predict(nb_fit2, newData, type = "prob")[,1] >= .0000025, "GT50K", "LT50K")
 
 
